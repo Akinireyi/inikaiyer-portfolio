@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bellevue LifeSpring AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --accent: #58a6ff; --accent2: #7ee787; --text: #e6edf3; --muted: #8b949e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+
+    .top-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+    }
+    .back-link { color: var(--muted); text-decoration: none; font-size: 13px; }
+    .back-link:hover { color: var(--accent); }
+    .bot-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #58a6ff, #7ee787);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .bot-info h2 { font-size: 15px; font-weight: 600; }
+    .bot-info p { font-size: 12px; color: var(--accent2); }
+
+    .chat-area {
+      flex: 1; overflow-y: auto; padding: 24px 20px;
+      display: flex; flex-direction: column; gap: 16px;
+      max-width: 720px; width: 100%; margin: 0 auto;
+    }
+
+    .message { display: flex; gap: 12px; max-width: 100%; }
+    .message.user { flex-direction: row-reverse; }
+    .msg-avatar {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .message.user .msg-avatar { background: linear-gradient(135deg, #58a6ff44, #7ee78744); }
+    .msg-bubble {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 16px;
+      font-size: 14px; line-height: 1.7; max-width: 80%;
+    }
+    .message.user .msg-bubble {
+      background: rgba(88,166,255,0.12); border-color: rgba(88,166,255,0.25);
+    }
+    .msg-bubble p { margin-bottom: 8px; }
+    .msg-bubble p:last-child { margin: 0; }
+
+    .typing { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
+    .typing span {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+      animation: bounce 1.2s infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+    .input-area {
+      border-top: 1px solid var(--border); padding: 16px 20px;
+      background: var(--surface);
+    }
+    .input-row {
+      display: flex; gap: 10px; max-width: 720px; margin: 0 auto;
+    }
+    .chat-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; color: var(--text);
+      font-family: 'Inter', sans-serif; font-size: 14px; resize: none;
+      outline: none; transition: border-color 0.2s;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .chat-input::placeholder { color: var(--muted); }
+    .send-btn {
+      background: var(--accent); color: #0d1117;
+      border: none; border-radius: 10px; padding: 12px 18px;
+      font-weight: 600; font-size: 14px; cursor: pointer;
+      transition: background 0.2s; white-space: nowrap;
+    }
+    .send-btn:hover { background: #79b8ff; }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .disclaimer {
+      text-align: center; font-size: 11px; color: var(--muted);
+      margin-top: 8px; max-width: 720px; margin-left: auto; margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="index.html" class="back-link">← Back to Portfolio</a>
+  <div class="bot-avatar">🌱</div>
+  <div class="bot-info">
+    <h2>Bellevue LifeSpring Assistant</h2>
+    <p>● Online — answers questions about LifeSpring's programs & services</p>
+  </div>
+</div>
+
+<div class="chat-area" id="chatArea">
+  <div class="message bot">
+    <div class="msg-avatar">🌱</div>
+    <div class="msg-bubble">
+      <p>Hi! I'm an AI assistant for <strong>Bellevue LifeSpring</strong>, a nonprofit serving families in need in the greater Bellevue area.</p>
+      <p>I can answer questions about LifeSpring's programs, services, how to get help, and how to get involved. What would you like to know?</p>
+    </div>
+  </div>
+</div>
+
+<div class="input-area">
+  <div class="input-row">
+    <textarea class="chat-input" id="userInput" placeholder="Ask about LifeSpring's programs, how to donate, volunteer opportunities..." rows="1"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send ↑</button>
+  </div>
+  <div class="disclaimer">This assistant answers based on publicly available information about Bellevue LifeSpring. For urgent help, visit bellevuelifespring.org directly.</div>
+</div>
+
+<script>
+  const chatArea = document.getElementById('chatArea');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  // Auto-resize textarea
+  userInput.addEventListener('input', () => {
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  });
+
+  userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function addMessage(role, content) {
+    const msg = document.createElement('div');
+    msg.className = `message ${role}`;
+    const avatar = document.createElement('div');
+    avatar.className = 'msg-avatar';
+    avatar.textContent = role === 'bot' ? '🌱' : '👤';
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = content.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('');
+    msg.appendChild(avatar);
+    msg.appendChild(bubble);
+    chatArea.appendChild(msg);
+    chatArea.scrollTop = chatArea.scrollHeight;
+    return msg;
+  }
+
+  function addTyping() {
+    const msg = document.createElement('div');
+    msg.className = 'message bot';
+    msg.id = 'typing';
+    msg.innerHTML = `<div class="msg-avatar">🌱</div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    chatArea.appendChild(msg);
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text) return;
+    addMessage('user', text);
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    sendBtn.disabled = true;
+    addTyping();
+
+    try {
+      const res = await fetch('/.netlify/functions/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await res.json();
+      document.getElementById('typing')?.remove();
+      addMessage('bot', data.reply || 'Sorry, I had trouble answering that. Please try again.');
+    } catch (err) {
+      document.getElementById('typing')?.remove();
+      addMessage('bot', 'I\'m having trouble connecting right now. Please try again in a moment.');
+    }
+
+    sendBtn.disabled = false;
+    userInput.focus();
+  }
+</script>
+</body>
+</html>
