@@ -1,7 +1,5 @@
-const { app } = require('@azure/functions');
-
 const LIFESPRING_CONTEXT = `
-Bellevue LifeSpring is a nonprofit organization based in Bellevue, Washington that provides support and services to low-income families and individuals in the greater Bellevue area. Here is what is known about the organization:
+Bellevue LifeSpring is a nonprofit organization based in Bellevue, Washington that provides support and services to low-income families and individuals in the greater Bellevue area.
 
 MISSION: Bellevue LifeSpring empowers people in need in the Bellevue community through practical assistance and relationship-building.
 
@@ -31,54 +29,48 @@ LOCATION: Bellevue, Washington (greater Seattle area)
 WEBSITE: bellevuelifespring.org
 `;
 
-app.http('chat', {
-  methods: ['POST'],
-  authLevel: 'anonymous',
-  handler: async (request) => {
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return { status: 400, jsonBody: { error: 'Invalid JSON' } };
-    }
+module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    const { message } = body;
-    if (!message) {
-      return { status: 400, jsonBody: { error: 'No message provided' } };
-    }
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return { status: 500, jsonBody: { error: 'API key not configured' } };
-    }
+  const { message } = req.body || {};
+  if (!message) {
+    return res.status(400).json({ error: 'No message provided' });
+  }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 512,
-        system: `You are a helpful assistant for Bellevue LifeSpring, a nonprofit organization in Bellevue, Washington.
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'API key not configured' });
+  }
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: `You are a helpful assistant for Bellevue LifeSpring, a nonprofit organization in Bellevue, Washington.
 Answer questions using ONLY the information provided below about the organization.
 If someone asks something you don't have information about, kindly direct them to visit bellevuelifespring.org or contact the organization directly.
 Keep responses warm, helpful, and concise. Do not make up information.
 
 ORGANIZATION INFORMATION:
 ${LIFESPRING_CONTEXT}`,
-        messages: [{ role: 'user', content: message }]
-      })
-    });
+      messages: [{ role: 'user', content: message }]
+    })
+  });
 
-    const data = await response.json();
-    const reply = data?.content?.[0]?.text || "I'm sorry, I couldn't generate a response. Please visit bellevuelifespring.org for more information.";
+  const data = await response.json();
+  const reply = data?.content?.[0]?.text || "I'm sorry, I couldn't generate a response. Please visit bellevuelifespring.org for more information.";
 
-    return {
-      status: 200,
-      jsonBody: { reply }
-    };
-  }
-});
+  return res.status(200).json({ reply });
+};
