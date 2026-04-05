@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inika Iyer — CS Student & Developer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #7ee787;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --purple: #bc8cff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: rgba(13,17,23,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .nav-logo {
+      font-family: 'Fira Code', monospace;
+      font-size: 15px; color: var(--accent2);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 28px; list-style: none; }
+    .nav-links a {
+      color: var(--muted); text-decoration: none;
+      font-size: 14px; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding: 100px 40px 60px;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .hero-content { max-width: 680px; }
+    .hero-greeting {
+      font-family: 'Fira Code', monospace;
+      color: var(--accent); font-size: 16px; margin-bottom: 16px;
+    }
+    .hero-name {
+      font-size: clamp(38px, 6vw, 64px);
+      font-weight: 700; line-height: 1.1;
+      margin-bottom: 12px;
+    }
+    .hero-tagline {
+      font-size: clamp(22px, 3vw, 32px);
+      color: var(--muted); font-weight: 400; margin-bottom: 24px;
+    }
+    .hero-tagline span { color: var(--purple); }
+    .hero-desc {
+      font-size: 16px; color: var(--muted);
+      max-width: 540px; margin-bottom: 36px; line-height: 1.75;
+    }
+    .hero-buttons { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 22px; border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      text-decoration: none; transition: all 0.2s; cursor: pointer; border: none;
+    }
+    .btn-primary {
+      background: var(--accent); color: #0d1117;
+    }
+    .btn-primary:hover { background: #79b8ff; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* SECTION */
+    section { padding: 80px 40px; max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-family: 'Fira Code', monospace;
+      font-size: 13px; color: var(--accent);
+      margin-bottom: 8px; letter-spacing: 1px;
+    }
+    .section-title {
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 700; margin-bottom: 12px;
+    }
+    .section-divider {
+      width: 60px; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+      border-radius: 2px; margin-bottom: 40px;
+    }
+
+    /* ABOUT */
+    .about-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+      align-items: start;
+    }
+    .about-text p { color: var(--muted); margin-bottom: 14px; font-size: 15px; line-height: 1.8; }
+    .about-text p strong { color: var(--text); }
+    .about-stats {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 32px; font-weight: 700;
+      color: var(--accent2); margin-bottom: 4px;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); }
+
+    /* PROJECTS */
+    .projects-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px;
+      transition: border-color 0.2s, transform 0.2s;
+      display: flex; flex-direction: column;
+    }
+    .project-card:hover {
+      border-color: var(--accent); transform: translateY(-3px);
+    }
+    .project-card.featured { border-color: var(--accent2); grid-column: 1 / -1; }
+    .project-top {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; margin-bottom: 14px;
+    }
+    .project-icon { font-size: 28px; }
+    .project-links { display: flex; gap: 10px; }
+    .project-links a {
+      color: var(--muted); font-size: 18px; text-decoration: none;
+      transition: color 0.2s;
+    }
+    .project-links a:hover { color: var(--accent); }
+    .project-title {
+      font-size: 17px; font-weight: 600; margin-bottom: 8px;
+    }
+    .project-desc {
+      font-size: 13px; color: var(--muted);
+      line-height: 1.7; flex: 1; margin-bottom: 16px;
+    }
+    .project-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      font-family: 'Fira Code', monospace;
+      font-size: 11px; padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(88,166,255,0.1);
+      color: var(--accent); border: 1px solid rgba(88,166,255,0.2);
+    }
+    .tag.green {
+      background: rgba(126,231,135,0.1);
+      color: var(--accent2); border-color: rgba(126,231,135,0.2);
+    }
+    .tag.purple {
+      background: rgba(188,140,255,0.1);
+      color: var(--purple); border-color: rgba(188,140,255,0.2);
+    }
+    .featured-badge {
+      font-size: 11px; font-weight: 600;
+      background: rgba(126,231,135,0.15);
+      color: var(--accent2); padding: 3px 10px;
+      border-radius: 20px; border: 1px solid rgba(126,231,135,0.3);
+    }
+
+    /* SKILLS */
+    .skills-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .skill-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px;
+    }
+    .skill-group-title {
+      font-size: 12px; font-weight: 600;
+      color: var(--accent); text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 14px;
+    }
+    .skill-list { list-style: none; }
+    .skill-list li {
+      font-size: 13px; color: var(--muted);
+      padding: 5px 0; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .skill-list li:last-child { border: none; }
+    .skill-list li::before { content: "▹"; color: var(--accent2); font-size: 11px; }
+
+    /* GITHUB */
+    .github-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px;
+      display: flex; align-items: center; gap: 32px;
+    }
+    .github-icon { font-size: 48px; }
+    .github-text h3 { font-size: 20px; margin-bottom: 8px; }
+    .github-text p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+
+    /* CONTACT */
+    .contact-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+    }
+    .contact-text p { color: var(--muted); font-size: 15px; line-height: 1.8; margin-bottom: 14px; }
+    .contact-links { display: flex; flex-direction: column; gap: 12px; }
+    .contact-link {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--muted); text-decoration: none;
+      font-size: 14px; padding: 12px 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; transition: all 0.2s;
+    }
+    .contact-link:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      text-align: center;
+      color: var(--muted); font-size: 13px;
+      font-family: 'Fira Code', monospace;
+    }
+
+    /* SCROLL INDICATOR */
+    .scroll-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--accent2);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+    }
+
+    @media (max-width: 700px) {
+      nav { padding: 14px 20px; }
+      .hero { padding: 100px 20px 40px; }
+      section { padding: 60px 20px; }
+      .about-grid, .contact-grid { grid-template-columns: 1fr; }
+      .project-card.featured { grid-column: auto; }
+      .github-section { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-logo">inika.iyer();</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-greeting">// Hi, my name is</div>
+    <h1 class="hero-name">Inika Iyer.</h1>
+    <div class="hero-tagline">I build things with <span>AI & code.</span></div>
+    <p class="hero-desc">
+      Computer Science student from Washington State, focused on artificial intelligence and machine learning.
+      I build real projects for real people — from AI chatbots for nonprofits to community-driven apps.
+      Currently a Running Start student at Bellevue College.
+    </p>
+    <div class="hero-buttons">
+      <a href="#projects" class="btn btn-primary">View My Work</a>
+      <a href="https://github.com/akinireyi" target="_blank" class="btn btn-outline">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-label">01. about me</div>
+  <h2 class="section-title">Who I Am</h2>
+  <div class="section-divider"></div>
+  <div class="about-grid">
+    <div class="about-text">
+      <p>I'm a high school senior from <strong>Washington State</strong> completing my second year of <strong>Running Start</strong> at Bellevue College — taking full college courses while finishing high school. I'll be enrolling in a 4-year CS program in Fall 2026.</p>
+      <p>My focus is on <strong>artificial intelligence and machine learning</strong> — specifically building AI tools that solve real problems for real communities. I don't just want to study AI; I want to deploy it for people who need it.</p>
+      <p>I've spent <strong>200+ hours</strong> doing community service with Bellevue LifeSpring, a local nonprofit serving families in need. That work is part of why my first real project was an AI chatbot built specifically for them.</p>
+      <p>I'm comfortable with <strong>Python, JavaScript, HTML/CSS</strong>, and I'm actively learning cloud deployment and API integration. I use the same modern tools — Claude API, GitHub, Netlify — that are used by engineers at major tech companies.</p>
+    </div>
+    <div class="about-stats">
+      <div class="stat-card">
+        <div class="stat-number">46.2</div>
+        <div class="stat-label">College credits earned<br>before freshman year</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">200+</div>
+        <div class="stat-label">Community service hours<br>with Bellevue LifeSpring</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">2yr</div>
+        <div class="stat-label">Running Start at<br>Bellevue College</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">AI</div>
+        <div class="stat-label">Primary focus: machine<br>learning & AI systems</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="section-label">02. projects</div>
+  <h2 class="section-title">What I've Built</h2>
+  <div class="section-divider"></div>
+  <div class="projects-grid">
+
+    <!-- FEATURED: LifeSpring Chatbot -->
+    <div class="project-card featured">
+      <div class="project-top">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="project-icon">🤖</span>
+          <span class="featured-badge">✦ Featured Project</span>
+        </div>
+        <div class="project-links">
+          <a href="chatbot.html" title="Live Demo">↗</a>
+          <a href="https://github.com/akinireyi" target="_blank" title="GitHub">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="project-title">Bellevue LifeSpring AI Assistant — Pilot Project</div>
+      <p class="project-desc">
+        Built an AI-powered chatbot for Bellevue LifeSpring, a local nonprofit serving low-income families in the greater Seattle area.
+        The chatbot answers questions about the organization's services, programs, and how to get involved — drawing exclusively from the nonprofit's
+        website content. Built using the Claude API with a custom system prompt, deployed with a clean embeddable chat interface
+        that any nonprofit can drop into their website. This project demonstrates practical AI deployment for community impact.
+      </p>
+      <div class="project-tags">
+        <span class="tag">Claude API</span>
+        <span class="tag">JavaScript</span>
+        <span class="tag green">Netlify Functions</span>
+        <span class="tag green">HTML/CSS</span>
+        <span class="tag purple">Nonprofit Tech</span>
+        <span class="tag purple">AI Deployment</span>
+      </div>
+    </div>
+
+    <!-- Python coursework -->
+    <div class="project-card">
+      <div class="project-top">
+        <span class="project-icon">🐍</span>
+        <div class="project-links">
+          <a href="https://github.com/akinireyi" target="_blank">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="project-title">Python Programming — DEV 108</div>
+      <p class="project-desc">
+        Coursework from Bellevue College's Introduction to Python Programming. Covers fundamentals of programming: problem decomposition,
+        procedural design, debugging, and documentation using Python. Building toward machine learning and data science applications.
+      </p>
+      <div class="project-tags">
+        <span class="tag">Python</span>
+        <span class="tag green">Bellevue College</span>
+        <span class="tag">Spring 2026</span>
+      </div>
+    </div>
+
+    <!-- Coming soon -->
+    <div class="project-card">
+      <div class="project-top">
+        <span class="project-icon">🚧</span>
+      </div>
+      <div class="project-title">More Projects Coming Soon</div>
+      <p class="project-desc">
+        Currently working on additional projects. Check back soon or follow on GitHub to see what's in progress.
+      </p>
+      <div class="project-tags">
+        <span class="tag purple">In Progress</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="section-label">03. skills</div>
+  <h2 class="section-title">What I Work With</h2>
+  <div class="section-divider"></div>
+  <div class="skills-grid">
+    <div class="skill-group">
+      <div class="skill-group-title">Languages</div>
+      <ul class="skill-list">
+        <li>Python</li>
+        <li>JavaScript</li>
+        <li>HTML / CSS</li>
+        <li>SQL (learning)</li>
+      </ul>
+    </div>
+    <div class="skill-group">
+      <div class="skill-group-title">AI & APIs</div>
+      <ul class="skill-list">
+        <li>Claude API (Anthropic)</li>
+        <li>REST API integration</li>
+        <li>Prompt engineering</li>
+        <li>Chatbot deployment</li>
+      </ul>
+    </div>
+    <div class="skill-group">
+      <div class="skill-group-title">Tools & Platforms</div>
+      <ul class="skill-list">
+        <li>GitHub</li>
+        <li>Netlify</li>
+        <li>VS Code</li>
+        <li>Claude Code CLI</li>
+      </ul>
+    </div>
+    <div class="skill-group">
+      <div class="skill-group-title">Interests</div>
+      <ul class="skill-list">
+        <li>Machine Learning</li>
+        <li>AI for Social Good</li>
+        <li>Full-Stack Dev</li>
+        <li>Business + Tech</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- GITHUB -->
+<section>
+  <div class="github-section">
+    <div class="github-icon">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="#8b949e"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    </div>
+    <div class="github-text">
+      <h3>See My Code on GitHub</h3>
+      <p>All my projects are version-controlled and available on GitHub. I use the same tools — Git, GitHub Actions, and modern deployment pipelines — used by engineers at companies like Microsoft, Google, and Amazon.</p>
+      <a href="https://github.com/akinireyi" target="_blank" class="btn btn-outline">github.com/akinireyi ↗</a>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-label">04. contact</div>
+  <h2 class="section-title">Get In Touch</h2>
+  <div class="section-divider"></div>
+  <div class="contact-grid">
+    <div class="contact-text">
+      <p>I'm currently a senior in high school (Running Start at Bellevue College) heading into a CS program in Fall 2026. If you want to talk about projects, opportunities, or collaboration — reach out.</p>
+      <p><span class="scroll-dot"></span> Open to internships, part-time work, and project collabs starting Summer 2026.</p>
+    </div>
+    <div class="contact-links">
+      <a href="mailto:akinireyi@gmail.com" class="contact-link">
+        <span>✉</span> akinireyi@gmail.com
+      </a>
+      <a href="https://github.com/akinireyi" target="_blank" class="contact-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        github.com/akinireyi
+      </a>
+      <a href="https://www.linkedin.com/in/inika-iyer" target="_blank" class="contact-link">
+        <span>in</span> LinkedIn
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span style="color:var(--muted)">Built by</span> Inika Iyer <span style="color:var(--muted)">· Washington State · Class of 2026 ·</span>
+  <a href="https://github.com/akinireyi" target="_blank" style="color:var(--accent);text-decoration:none;">GitHub ↗</a>
+</footer>
+
+</body>
+</html>
