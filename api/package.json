@@ -1,8 +1,4 @@
 {
   "name": "inikaiyer-api",
-  "version": "1.0.0",
-  "main": "chat.js",
-  "dependencies": {
-    "@azure/functions": "^4.0.0"
-  }
+  "version": "1.0.0"
 }
