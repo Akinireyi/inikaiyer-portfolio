@@ -1,0 +1,8 @@
+{
+  "name": "inikaiyer-portfolio",
+  "private": true,
+  "description": "Personal site + June Planner app",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

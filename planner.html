@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Planner" />
+<meta name="theme-color" content="#0d1117" />
+<title>June Planner — Inika</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2230; --border:#30363d;
+  --accent:#58a6ff; --green:#7ee787; --yellow:#e3b341; --red:#f85149;
+  --text:#e6edf3; --muted:#8b949e; --purple:#bc8cff;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;}
+body{padding-bottom:84px;min-height:100vh;}
+a{color:var(--accent);}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+input,select,textarea{font-family:inherit;font-size:15px;}
+.hide{display:none!important;}
+
+/* ---------- top bar ---------- */
+header{position:sticky;top:0;z-index:30;background:rgba(13,17,23,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px;}
+header h1{font-size:17px;font-weight:700;letter-spacing:-.2px;}
+header h1 span{color:var(--muted);font-weight:500;}
+.sync{margin-left:auto;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);transition:.3s;}
+.dot.saving{background:var(--yellow);} .dot.error{background:var(--red);}
+.ring{--p:0;position:relative;width:38px;height:38px;border-radius:50%;flex:none;
+  background:conic-gradient(var(--green) calc(var(--p)*1%), #2a3140 0);
+  display:grid;place-items:center;font-size:11px;font-weight:700;}
+.ring::after{content:'';position:absolute;width:28px;height:28px;border-radius:50%;background:var(--bg);}
+.ring b{position:relative;z-index:1;}
+
+/* ---------- layout ---------- */
+main{max-width:880px;margin:0 auto;padding:18px 16px;}
+.view{animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+h2.section{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 2px 12px;font-weight:600;}
+h2.section:first-child{margin-top:4px;}
+
+/* ---------- bottom nav ---------- */
+nav{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(22,27,34,.96);backdrop-filter:blur(8px);
+  border-top:1px solid var(--border);display:flex;padding:6px max(8px,env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom));}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;color:var(--muted);font-size:11px;font-weight:600;}
+nav button.active{color:var(--accent);}
+nav button .ic{font-size:20px;line-height:1;}
+
+/* ---------- cards ---------- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.rock{overflow:hidden;padding:0;}
+.rock-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;}
+.rock-emoji{font-size:22px;width:30px;text-align:center;}
+.rock-title{font-weight:600;font-size:16px;flex:1;}
+.rock-meta{font-size:12px;color:var(--muted);}
+.bar{height:6px;border-radius:4px;background:#2a3140;overflow:hidden;margin-top:8px;}
+.bar > i{display:block;height:100%;background:var(--green);border-radius:4px;transition:width .4s;}
+.rock-body{border-top:1px solid var(--border);padding:6px 12px 12px;}
+.chev{color:var(--muted);transition:transform .2s;font-size:13px;}
+.rock.open .chev{transform:rotate(90deg);}
+
+/* ---------- milestone rows ---------- */
+.ms{display:flex;align-items:flex-start;gap:11px;padding:11px 6px;border-bottom:1px solid #21262d;}
+.ms:last-child{border-bottom:none;}
+.check{flex:none;width:22px;height:22px;border-radius:7px;border:2px solid var(--border);margin-top:1px;display:grid;place-items:center;font-size:13px;color:transparent;transition:.15s;}
+.check.done{background:var(--green);border-color:var(--green);color:#0d1117;}
+.check.prog{border-color:var(--yellow);color:var(--yellow);}
+.ms-main{flex:1;min-width:0;}
+.ms-title{font-size:15px;line-height:1.35;}
+.ms.done .ms-title{text-decoration:line-through;color:var(--muted);}
+.ms-sub{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.tag{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);display:inline-flex;align-items:center;gap:4px;}
+.tag.due{color:var(--text);} .tag.over{background:rgba(248,81,73,.15);color:#ff9d96;border-color:rgba(248,81,73,.4);}
+.tag.soon{background:rgba(227,179,65,.15);color:#f0cf7a;border-color:rgba(227,179,65,.4);}
+.tag.p1{color:#ff9d96;border-color:rgba(248,81,73,.4);}
+.tag.sched{color:var(--accent);border-color:rgba(88,166,255,.4);}
+.ms-edit{margin-left:auto;color:var(--muted);font-size:16px;padding:2px 6px;}
+
+/* ---------- buttons ---------- */
+.btn{background:var(--accent);color:#08121f;font-weight:600;padding:11px 16px;border-radius:10px;font-size:14px;display:inline-flex;align-items:center;gap:7px;}
+.btn.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn.sm{padding:7px 12px;font-size:13px;}
+.btn.full{width:100%;justify-content:center;}
+.add-line{margin:6px 2px 2px;}
+
+/* ---------- schedule ---------- */
+.weekstrip{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;}
+.daybtn{flex:none;min-width:48px;padding:8px 6px;border-radius:10px;background:var(--surface);border:1px solid var(--border);text-align:center;}
+.daybtn .dn{font-size:11px;color:var(--muted);} .daybtn .dd{font-size:17px;font-weight:700;margin-top:2px;}
+.daybtn.active{background:var(--accent);border-color:var(--accent);color:#08121f;}
+.daybtn.active .dn{color:#08121f;}
+.daybtn.today .dd{color:var(--accent);} .daybtn.active.today .dd{color:#08121f;}
+.slot{display:flex;gap:10px;padding:9px 0;border-top:1px solid #21262d;}
+.slot-time{flex:none;width:62px;font-size:12px;color:var(--muted);padding-top:9px;text-align:right;}
+.slot-body{flex:1;display:flex;flex-direction:column;gap:6px;min-height:34px;}
+.evt{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:10px;}
+.evt.done{opacity:.55;} .evt.done .evt-t{text-decoration:line-through;}
+.evt-t{flex:1;font-size:14px;}
+.evt .check{width:20px;height:20px;}
+.slot-add{align-self:flex-start;color:var(--muted);font-size:13px;padding:5px 0;}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .2s;}
+.sheet{background:var(--surface);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;
+  padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;animation:up .25s cubic-bezier(.2,.8,.2,1);}
+@keyframes up{from{transform:translateY(40px);opacity:.5;}to{transform:none;opacity:1;}}
+@media(min-width:560px){.scrim{align-items:center;}.sheet{border-radius:18px;}}
+.sheet h3{font-size:18px;margin-bottom:16px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 12px;}
+.field textarea{min-height:70px;resize:vertical;}
+.row2{display:flex;gap:10px;} .row2>*{flex:1;}
+.seg{display:flex;gap:6px;}
+.seg button{flex:1;padding:10px;border-radius:9px;background:var(--bg);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--muted);}
+.seg button.on{background:var(--surface2);color:var(--text);border-color:var(--accent);}
+.seg button.on.g{border-color:var(--green);color:var(--green);} .seg button.on.y{border-color:var(--yellow);color:var(--yellow);}
+.sheet-actions{display:flex;gap:10px;margin-top:8px;}
+.del{color:var(--red);margin-right:auto;align-self:center;font-size:14px;font-weight:600;}
+.emoji-pick{display:flex;flex-wrap:wrap;gap:6px;}
+.emoji-pick button{font-size:20px;padding:7px;border-radius:9px;border:1px solid var(--border);background:var(--bg);}
+.emoji-pick button.on{border-color:var(--accent);background:var(--surface2);}
+
+/* ---------- dashboard bits ---------- */
+.hero{display:flex;align-items:center;gap:16px;margin-bottom:4px;}
+.hero .big{font-size:26px;font-weight:700;letter-spacing:-.5px;}
+.hero .sub{color:var(--muted);font-size:13px;margin-top:2px;}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:18px;}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.statcard{flex:1;min-width:90px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.statcard b{font-size:22px;display:block;} .statcard span{font-size:11px;color:var(--muted);}
+
+/* ---------- gate ---------- */
+#gate{position:fixed;inset:0;background:var(--bg);z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;}
+#gate input{font-size:22px;letter-spacing:6px;text-align:center;width:180px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:14px;}
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:30px;font-size:13px;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.4);animation:fade .2s;}
+</style>
+</head>
+<body>
+
+<!-- PIN gate -->
+<div id="gate" class="hide">
+  <div style="font-size:32px">🔒</div>
+  <div style="text-align:center"><b style="font-size:18px">June Planner</b><div style="color:var(--muted);font-size:13px;margin-top:4px">Enter your PIN</div></div>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="off" />
+  <button class="btn" onclick="tryPin()">Unlock</button>
+  <div id="pinerr" style="color:var(--red);font-size:13px;height:16px"></div>
+</div>
+
+<header class="hide" id="bar">
+  <h1>June <span>Planner</span></h1>
+  <div class="sync"><span id="syncTxt">Saved</span><span class="dot" id="dot"></span></div>
+  <div class="ring" id="ring"><b>0%</b></div>
+</header>
+
+<main class="hide" id="app"></main>
+
+<nav class="hide" id="nav">
+  <button data-v="dash" class="active" onclick="go('dash')"><span class="ic">🏠</span>Today</button>
+  <button data-v="rocks" onclick="go('rocks')"><span class="ic">🪨</span>Rocks</button>
+  <button data-v="sched" onclick="go('sched')"><span class="ic">📅</span>Schedule</button>
+</nav>
+
+<script>
+/* =========================================================================
+   June Planner — built from the "big rocks" framework.
+   Big rocks  ->  milestones (deadline, est. hours, priority, status)
+   Time       ->  schedule (recurring classes/work + scheduled milestones)
+   Everything auto-saves to Netlify Blobs via /.netlify/functions/planner
+   ========================================================================= */
+
+const API = '/.netlify/functions/planner';
+const DAYN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYF = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+/* ---- seed: your real rocks + recurring commitments (used only on first run) ---- */
+function seed(){
+  return {
+    version:1, updatedAt:new Date().toISOString(),
+    // Recurring commitments. day: 0=Sun..6=Sat. times in "HH:MM".
+    recurring:[
+      {id:'r1',title:'Tech Theater class',  days:[1,2,3,5],   start:'08:50',end:'09:50',rock:'math'},
+      {id:'r2',title:'Bellevue College math',days:[1,2,3,4,5],start:'11:30',end:'12:20',rock:'math'},
+      {id:'r3',title:'Work',                 days:[1],         start:'17:00',end:'19:00',rock:'work'},
+      {id:'r4',title:'Work',                 days:[6],         start:'09:00',end:'11:30',rock:'work'},
+    ],
+    rocks:[
+      {id:'math',  emoji:'📐',name:'Pass my classes (Math)',
+        milestones:[
+          {id:m(),title:'Finish makeup work',deadline:'2026-06-05',hours:3,priority:1,status:'todo'},
+          {id:m(),title:'Figure out WHY I freeze / don’t retain (problem-solve it)',deadline:'2026-06-07',hours:2,priority:1,status:'todo',notes:'Stress? Didn’t know it? Didn’t remember it? Find the real cause before fixing.'},
+          {id:m(),title:'Prep for the June 12 exam',deadline:'2026-06-12',hours:5,priority:1,status:'todo'},
+          {id:m(),title:'Revision for the final (tests 1-3 + new material)',deadline:'2026-06-22',hours:6,priority:2,status:'todo'},
+          {id:m(),title:'Aruna’s homework (weekly)',deadline:'',hours:2,priority:2,status:'todo'},
+          {id:m(),title:'Teacher’s homework (weekly)',deadline:'',hours:2,priority:2,status:'todo'},
+        ]},
+      {id:'python',emoji:'🐍',name:'Python class',
+        milestones:[
+          {id:m(),title:'Stay on top of assignments',deadline:'',hours:2,priority:3,status:'todo'},
+          {id:m(),title:'Prep for Python exam',deadline:'',hours:3,priority:2,status:'todo'},
+        ]},
+      {id:'biz',   emoji:'💼',name:'Business class',
+        milestones:[{id:m(),title:'Finish assignments + exam',deadline:'',hours:2,priority:3,status:'todo'}]},
+      {id:'grad',  emoji:'🎓',name:'Plan & celebrate graduation',
+        milestones:[
+          {id:m(),title:'Plan the grad party (where / what goes where)',deadline:'',hours:2,priority:2,status:'todo'},
+          {id:m(),title:'Send invitations (Amma, friends, family)',deadline:'',hours:1,priority:2,status:'todo'},
+          {id:m(),title:'Order the food',deadline:'',hours:1,priority:2,status:'todo'},
+          {id:m(),title:'Get my clothes',deadline:'',hours:1,priority:3,status:'todo'},
+          {id:m(),title:'Haircut',deadline:'',hours:1,priority:3,status:'todo'},
+          {id:m(),title:'Power-wash + clean + set up photo wall',deadline:'',hours:3,priority:3,status:'todo'},
+        ]},
+      {id:'senior',emoji:'🎉',name:'Enjoy senior year',
+        milestones:[
+          {id:m(),title:'Prom stuff',deadline:'',hours:0,priority:3,status:'todo'},
+          {id:m(),title:'Hang out with Corbin',deadline:'',hours:0,priority:3,status:'todo'},
+          {id:m(),title:'Visit friends',deadline:'',hours:0,priority:3,status:'todo'},
+          {id:m(),title:'Attend friends’ grad parties',deadline:'',hours:0,priority:3,status:'todo'},
+          {id:m(),title:'Help Arya with proposing / asking',deadline:'',hours:0,priority:3,status:'todo'},
+        ]},
+      {id:'college',emoji:'🏫',name:'Get ready for college',
+        milestones:[{id:m(),title:'College prep tasks',deadline:'',hours:0,priority:3,status:'todo'}]},
+      {id:'family',emoji:'❤️',name:'Family time',milestones:[]},
+      {id:'friends',emoji:'🧑‍🤝‍🧑',name:'Friends time',milestones:[]},
+      {id:'fit',   emoji:'🏃‍♀️',name:'Workout',milestones:[]},
+      {id:'eat',   emoji:'🥗',name:'Eat well',milestones:[]},
+      {id:'work',  emoji:'💵',name:'Job / Work',milestones:[]},
+    ]
+  };
+}
+
+/* ---- state + helpers ---- */
+let state=null, view='dash', selDate=todayISO(), pin='';
+function m(){ return 'm'+Math.floor(performance.now()*1000)+'_'+(m._n=(m._n||0)+1); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseISO(s){ const [y,mo,d]=s.split('-').map(Number); return new Date(y,mo-1,d); }
+function fmtTime(hhmm){ let [h,mi]=hhmm.split(':').map(Number); const ap=h<12?'AM':'PM'; h=h%12||12; return h+(mi?':'+String(mi).padStart(2,'0'):'')+' '+ap; }
+function daysUntil(iso){ if(!iso) return null; const a=parseISO(iso), b=parseISO(todayISO()); return Math.round((a-b)/864e5); }
+function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const $=s=>document.querySelector(s);
+
+/* ---- networking + auto-save ---- */
+let saveTimer=null, saving=false;
+function setSync(s){ const dot=$('#dot'),t=$('#syncTxt');
+  dot.className='dot'+(s==='saving'?' saving':s==='error'?' error':'');
+  t.textContent=s==='saving'?'Saving…':s==='error'?'Offline — retrying':'Saved'; }
+
+async function apiGet(){
+  const r=await fetch(API,{headers:{'x-planner-pin':pin}});
+  if(r.status===401) throw {auth:true};
+  return (await r.json()).state;
+}
+function save(){
+  setSync('saving');
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(doSave,700);
+}
+async function doSave(){
+  if(saving){ save(); return; }
+  saving=true;
+  state.updatedAt=new Date().toISOString();
+  try{
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','x-planner-pin':pin},body:JSON.stringify({state})});
+    if(!r.ok) throw new Error('save failed');
+    setSync('ok');
+  }catch(e){ setSync('error'); setTimeout(save,3000); }
+  finally{ saving=false; }
+}
+
+/* ---- progress math ---- */
+function msProgress(list){ // returns {done, total, pct}
+  const counts=list.filter(x=>x.deadline||x.status!=='todo'||x.scheduledDate); // count "real" tasks
+  const total=list.length;
+  if(!total) return {done:0,total:0,pct:null};
+  let v=0; list.forEach(x=>{ v+= x.status==='done'?1 : x.status==='prog'?0.5 : 0; });
+  return {done:list.filter(x=>x.status==='done').length,total,pct:Math.round(v/total*100)};
+}
+function overallPct(){
+  let v=0,n=0; state.rocks.forEach(r=>r.milestones.forEach(x=>{ n++; v+= x.status==='done'?1:x.status==='prog'?0.5:0; }));
+  return n?Math.round(v/n*100):0;
+}
+
+/* ====================== RENDER ====================== */
+function render(){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===view));
+  const p=overallPct();
+  $('#ring').style.setProperty('--p',p);
+  $('#ring').innerHTML='<b>'+p+'%</b>';
+  if(view==='dash') renderDash();
+  else if(view==='rocks') renderRocks();
+  else renderSched();
+}
+function go(v){ view=v; render(); window.scrollTo(0,0); }
+
+/* ---------- DASHBOARD ---------- */
+function renderDash(){
+  const today=new Date();
+  const allMs=[]; state.rocks.forEach(r=>r.milestones.forEach(x=>allMs.push({...x,rock:r})));
+  const open=allMs.filter(x=>x.status!=='done');
+
+  // due soon / at risk: has deadline, sort by date
+  const dated=open.filter(x=>x.deadline).sort((a,b)=>a.deadline.localeCompare(b.deadline));
+  const overdue=dated.filter(x=>daysUntil(x.deadline)<0);
+  const soon=dated.filter(x=>{const d=daysUntil(x.deadline);return d>=0&&d<=3;});
+
+  const doneCount=allMs.filter(x=>x.status==='done').length;
+
+  let h=`<div class="view">
+    <div class="hero">
+      <div>
+        <div class="big">${DAYF[today.getDay()]}</div>
+        <div class="sub">${today.toLocaleDateString(undefined,{month:'long',day:'numeric'})} · ${open.length} tasks open · ${doneCount} done</div>
+      </div>
+    </div>
+    <div class="pill-row" style="margin:14px 0 4px">
+      <div class="statcard"><b>${overdue.length}</b><span>overdue</span></div>
+      <div class="statcard"><b>${soon.length}</b><span>due in 3 days</span></div>
+      <div class="statcard"><b>${overallPct()}%</b><span>month done</span></div>
+    </div>`;
+
+  // At-risk section
+  if(overdue.length||soon.length){
+    h+=`<h2 class="section">⚠️ Needs attention</h2>`;
+    h+=`<div class="card">`+[...overdue,...soon].map(msRow).join('')+`</div>`;
+  }
+
+  // Today's schedule preview
+  const ev=eventsFor(selDateToday()).slice(0,4);
+  h+=`<h2 class="section">📅 Today's plan</h2><div class="card">`;
+  h+= ev.length? ev.map(e=>scheduleEvtMini(e)).join('') : `<div class="empty">No blocks scheduled yet today.<br><button class="btn ghost sm" style="margin-top:10px" onclick="go('sched')">Open schedule</button></div>`;
+  h+=`</div>`;
+
+  // Rock progress overview
+  h+=`<h2 class="section">🪨 Your rocks</h2>`;
+  state.rocks.filter(r=>r.milestones.length).forEach(r=>{
+    const pr=msProgress(r.milestones);
+    h+=`<div class="card" style="padding:13px 16px;cursor:pointer" onclick="go('rocks')">
+      <div style="display:flex;align-items:center;gap:11px">
+        <span style="font-size:18px">${r.emoji}</span>
+        <span style="flex:1;font-weight:600">${escapeHtml(r.name)}</span>
+        <span class="rock-meta">${pr.done}/${pr.total}</span>
+      </div>
+      <div class="bar"><i style="width:${pr.pct||0}%"></i></div>
+    </div>`;
+  });
+  h+=`</div>`;
+  $('#app').innerHTML=h;
+}
+function selDateToday(){ return todayISO(); }
+function scheduleEvtMini(e){
+  return `<div class="ms ${e.status==='done'?'done':''}" onclick="${e.msId?`openMs('${e.rockId}','${e.msId}')`:''}">
+    <div class="check ${e.status==='done'?'done':e.status==='prog'?'prog':''}" onclick="event.stopPropagation();toggleEvt('${e.key}')">${e.status==='done'?'✓':e.status==='prog'?'·':''}</div>
+    <div class="ms-main"><div class="ms-title">${escapeHtml(e.title)}</div>
+    <div class="ms-sub"><span class="tag">${e.start?fmtTime(e.start):''}${e.end?' – '+fmtTime(e.end):''}</span></div></div>
+  </div>`;
+}
+
+/* ---------- ROCKS ---------- */
+let openRock=null;
+function renderRocks(){
+  let h=`<div class="view"><h2 class="section">Big rocks → milestones</h2>`;
+  state.rocks.forEach(r=>{
+    const pr=msProgress(r.milestones);
+    const isOpen=openRock===r.id;
+    h+=`<div class="card rock ${isOpen?'open':''}">
+      <div class="rock-head" onclick="toggleRock('${r.id}')">
+        <span class="rock-emoji">${r.emoji}</span>
+        <div style="flex:1;min-width:0">
+          <div class="rock-title">${escapeHtml(r.name)}</div>
+          <div class="rock-meta">${pr.total?pr.done+'/'+pr.total+' done':'no milestones yet'}</div>
+          ${pr.total?`<div class="bar"><i style="width:${pr.pct}%"></i></div>`:''}
+        </div>
+        <span class="chev">▶</span>
+      </div>`;
+    if(isOpen){
+      h+=`<div class="rock-body">`;
+      r.milestones.forEach(x=>h+=msRow({...x,rock:r}));
+      h+=`<div class="add-line"><button class="btn ghost sm full" onclick="openMs('${r.id}',null)">＋ Add milestone</button></div></div>`;
+    }
+    h+=`</div>`;
+  });
+  h+=`<button class="btn ghost full" style="margin-top:6px" onclick="openRockEdit(null)">＋ Add a new rock</button></div>`;
+  $('#app').innerHTML=h;
+}
+function toggleRock(id){ openRock=openRock===id?null:id; renderRocks(); }
+
+function msRow(x){ // x has .rock attached
+  const d=daysUntil(x.deadline);
+  let dueTag='';
+  if(x.deadline){
+    const lbl = d<0?`${-d}d overdue` : d===0?'today' : d===1?'tomorrow' : `${d} days`;
+    const cls = d<0?'over' : d<=3?'soon' : 'due';
+    dueTag=`<span class="tag ${cls}">📅 ${lbl}</span>`;
+  }
+  return `<div class="ms ${x.status==='done'?'done':''}">
+    <div class="check ${x.status==='done'?'done':x.status==='prog'?'prog':''}" onclick="cycleStatus('${x.rock.id}','${x.id}')">${x.status==='done'?'✓':x.status==='prog'?'·':''}</div>
+    <div class="ms-main" onclick="openMs('${x.rock.id}','${x.id}')">
+      <div class="ms-title">${escapeHtml(x.title)}</div>
+      <div class="ms-sub">
+        ${dueTag}
+        ${x.priority===1?'<span class="tag p1">🔥 High</span>':''}
+        ${x.hours?`<span class="tag">⏱ ${x.hours}h</span>`:''}
+        ${x.scheduledDate?`<span class="tag sched">🗓 ${parseISO(x.scheduledDate).toLocaleDateString(undefined,{month:'short',day:'numeric'})}${x.scheduledStart?' '+fmtTime(x.scheduledStart):''}</span>`:''}
+        ${x.notes?'<span class="tag">📝</span>':''}
+      </div>
+    </div>
+    <button class="ms-edit" onclick="openMs('${x.rock.id}','${x.id}')">✎</button>
+  </div>`;
+}
+
+/* status cycle: todo -> prog -> done -> todo */
+function cycleStatus(rid,mid){
+  const ms=findMs(rid,mid); if(!ms) return;
+  ms.status = ms.status==='todo'?'prog':ms.status==='prog'?'done':'todo';
+  save(); render();
+}
+function findMs(rid,mid){ const r=state.rocks.find(r=>r.id===rid); return r&&r.milestones.find(x=>x.id===mid); }
+
+/* ---------- SCHEDULE ---------- */
+function renderSched(){
+  // June 2026 week strip around selDate
+  const sel=parseISO(selDate);
+  let h=`<div class="view"><div class="weekstrip">`;
+  // show June 1-30 scrollable
+  for(let day=1;day<=30;day++){
+    const dt=new Date(2026,5,day);
+    const iso='2026-06-'+String(day).padStart(2,'0');
+    h+=`<button class="daybtn ${iso===selDate?'active':''} ${iso===todayISO()?'today':''}" onclick="setDate('${iso}')">
+      <div class="dn">${DAYN[dt.getDay()]}</div><div class="dd">${day}</div></button>`;
+  }
+  h+=`</div>`;
+  const dt=parseISO(selDate);
+  h+=`<h2 class="section">${DAYF[dt.getDay()]}, June ${dt.getDate()}</h2>`;
+
+  const events=eventsFor(selDate);
+  // build hourly slots wake->bed
+  const dow=dt.getDay();
+  const wake={0:9,1:7.5,2:7.5,3:6.5,4:8,5:7.5,6:9}[dow];
+  const bed=(dow===0||dow===6)?21:22;
+  h+=`<div class="card" style="padding:8px 14px">`;
+  for(let t=Math.floor(wake);t<bed;t++){
+    const slotStart=t*60, slotEnd=(t+1)*60;
+    const inSlot=events.filter(e=>{const mn=toMin(e.start);return mn>=slotStart&&mn<slotEnd;});
+    const label=fmtTime(String(t).padStart(2,'0')+':00');
+    h+=`<div class="slot"><div class="slot-time">${label}</div><div class="slot-body">`;
+    inSlot.forEach(e=>h+=schedEvt(e));
+    h+=`<button class="slot-add" onclick="quickAdd('${String(t).padStart(2,'0')+':00'}')">＋ add</button>`;
+    h+=`</div></div>`;
+  }
+  // anything without a start time
+  const untimed=events.filter(e=>!e.start);
+  if(untimed.length){ h+=`<div class="slot"><div class="slot-time">anytime</div><div class="slot-body">`+untimed.map(schedEvt).join('')+`</div></div>`; }
+  h+=`</div></div>`;
+  $('#app').innerHTML=h;
+}
+function setDate(iso){ selDate=iso; renderSched(); }
+function toMin(hhmm){ if(!hhmm) return 1e9; const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
+function schedEvt(e){
+  return `<div class="evt ${e.status==='done'?'done':''}" style="border-left-color:${e.color||'var(--accent)'}">
+    <div class="check ${e.status==='done'?'done':e.status==='prog'?'prog':''}" onclick="toggleEvt('${e.key}')">${e.status==='done'?'✓':e.status==='prog'?'·':''}</div>
+    <div class="evt-t" onclick="${e.msId?`openMs('${e.rockId}','${e.msId}')`:`editBlock('${e.key}')`}">
+      ${escapeHtml(e.title)}
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${e.start?fmtTime(e.start):''}${e.end?' – '+fmtTime(e.end):''}${e.rockName?' · '+e.rockName:''}</div>
+    </div>
+  </div>`;
+}
+
+/* Build the merged event list for a date: recurring + scheduled milestones + one-off blocks */
+function eventsFor(iso){
+  const dt=parseISO(iso), dow=dt.getDay(), out=[];
+  // recurring
+  state.recurring.forEach(r=>{ if(r.days.includes(dow)){
+    const rk=state.rocks.find(x=>x.id===r.rock);
+    out.push({key:'rec:'+r.id+':'+iso,title:r.title,start:r.start,end:r.end,status:recStatus(r.id,iso),
+      rockName:rk?rk.name:'',color:'#7ee787',recId:r.id});
+  }});
+  // scheduled milestones
+  state.rocks.forEach(rk=>rk.milestones.forEach(x=>{ if(x.scheduledDate===iso){
+    out.push({key:'ms:'+x.id,title:x.title,start:x.scheduledStart||'',end:'',status:x.status,
+      msId:x.id,rockId:rk.id,rockName:rk.name,color:'#58a6ff'});
+  }}));
+  // one-off blocks
+  (state.blocks||[]).filter(b=>b.date===iso).forEach(b=>{
+    out.push({key:'blk:'+b.id,title:b.title,start:b.start||'',end:b.end||'',status:b.status||'todo',blkId:b.id,color:'#bc8cff'});
+  });
+  return out.sort((a,b)=>toMin(a.start)-toMin(b.start));
+}
+function recStatus(rid,iso){ const k=rid+':'+iso; return (state.recDone&&state.recDone[k])||'todo'; }
+
+function toggleEvt(key){
+  const [type,id,iso]=key.split(':');
+  if(type==='rec'){ state.recDone=state.recDone||{}; const k=id+':'+iso;
+    const cur=state.recDone[k]||'todo'; state.recDone[k]=cur==='todo'?'prog':cur==='prog'?'done':'todo'; }
+  else if(type==='ms'){ const ms=findMsById(id); if(ms) ms.status=ms.status==='todo'?'prog':ms.status==='prog'?'done':'todo'; }
+  else if(type==='blk'){ const b=(state.blocks||[]).find(b=>b.id===id); if(b) b.status=b.status==='todo'?'prog':b.status==='prog'?'done':'todo'; }
+  save(); render();
+}
+function findMsById(id){ for(const r of state.rocks){ const x=r.milestones.find(m=>m.id===id); if(x) return x; } return null; }
+
+/* ====================== MODALS ====================== */
+let editing=null; // {rockId, ms} or {block}
+function sheet(html){ const s=document.createElement('div'); s.className='scrim'; s.id='scrim';
+  s.innerHTML=`<div class="sheet" onclick="event.stopPropagation()">${html}</div>`;
+  s.onclick=closeSheet; document.body.appendChild(s); }
+function closeSheet(){ const s=$('#scrim'); if(s) s.remove(); editing=null; }
+
+function openMs(rid,mid){
+  const r=state.rocks.find(r=>r.id===rid);
+  const ms=mid?r.milestones.find(x=>x.id===mid):{id:m(),title:'',deadline:'',hours:0,priority:3,status:'todo',notes:'',scheduledDate:'',scheduledStart:''};
+  editing={rid,mid,ms};
+  sheet(`
+    <h3>${mid?'Edit':'New'} milestone</h3>
+    <div class="field"><label>What needs to get done?</label><input id="f_title" value="${escapeHtml(ms.title)}" placeholder="e.g. Prep for the June 12 exam"></div>
+    <div class="row2">
+      <div class="field"><label>Deadline</label><input id="f_deadline" type="date" min="2026-06-01" max="2026-08-31" value="${ms.deadline||''}"></div>
+      <div class="field"><label>Est. hours</label><input id="f_hours" type="number" min="0" step="0.5" value="${ms.hours||''}" placeholder="0"></div>
+    </div>
+    <div class="field"><label>Priority</label><div class="seg" id="f_pri">
+      <button data-v="1" class="${ms.priority===1?'on':''}">🔥 High</button>
+      <button data-v="2" class="${ms.priority===2?'on':''}">Medium</button>
+      <button data-v="3" class="${ms.priority===3?'on':''}">Low</button></div></div>
+    <div class="field"><label>Status</label><div class="seg" id="f_status">
+      <button data-v="todo" class="${ms.status==='todo'?'on':''}">To do</button>
+      <button data-v="prog" class="${ms.status==='prog'?'on y':''}">In progress</button>
+      <button data-v="done" class="${ms.status==='done'?'on g':''}">Done</button></div></div>
+    <div class="row2">
+      <div class="field"><label>Schedule on (optional)</label><input id="f_schedDate" type="date" min="2026-06-01" max="2026-08-31" value="${ms.scheduledDate||''}"></div>
+      <div class="field"><label>At time</label><input id="f_schedTime" type="time" value="${ms.scheduledStart||''}"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Any details…">${escapeHtml(ms.notes||'')}</textarea></div>
+    <div class="sheet-actions">
+      ${mid?`<button class="del" onclick="delMs()">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn" onclick="saveMs()">Save</button>
+    </div>`);
+  segWire('f_pri'); segWire('f_status');
+  setTimeout(()=>$('#f_title').focus(),50);
+}
+function segWire(id){ const el=$('#'+id); el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  el.querySelectorAll('button').forEach(x=>x.classList.remove('on','g','y'));
+  b.classList.add('on'); if(b.dataset.v==='done')b.classList.add('g'); if(b.dataset.v==='prog')b.classList.add('y'); el.dataset.val=b.dataset.v; }); }
+function segVal(id,def){ const el=$('#'+id); return el.dataset.val|| (el.querySelector('.on')?.dataset.v) || def; }
+
+function saveMs(){
+  const {rid,mid,ms}=editing;
+  ms.title=$('#f_title').value.trim()||'Untitled';
+  ms.deadline=$('#f_deadline').value;
+  ms.hours=parseFloat($('#f_hours').value)||0;
+  ms.priority=parseInt(segVal('f_pri',3));
+  ms.status=segVal('f_status','todo');
+  ms.scheduledDate=$('#f_schedDate').value;
+  ms.scheduledStart=$('#f_schedTime').value;
+  ms.notes=$('#f_notes').value.trim();
+  const r=state.rocks.find(r=>r.id===rid);
+  if(!mid) r.milestones.push(ms);
+  closeSheet(); save(); render();
+}
+function delMs(){ const {rid,ms}=editing; const r=state.rocks.find(r=>r.id===rid);
+  r.milestones=r.milestones.filter(x=>x.id!==ms.id); closeSheet(); save(); render(); }
+
+const EMOJIS=['📐','🐍','💼','🎓','🎉','🏫','❤️','🧑‍🤝‍🧑','🏃‍♀️','🥗','💵','🎯','📚','🎨','🎵','✈️','🛒','🧹','💪','🌟'];
+function openRockEdit(rid){
+  const r=rid?state.rocks.find(x=>x.id===rid):{id:'rk'+m(),emoji:'🎯',name:'',milestones:[]};
+  editing={rockEdit:r,isNew:!rid};
+  sheet(`
+    <h3>${rid?'Edit':'New'} rock</h3>
+    <div class="field"><label>Name</label><input id="f_rname" value="${escapeHtml(r.name)}" placeholder="e.g. Pass my classes"></div>
+    <div class="field"><label>Icon</label><div class="emoji-pick" id="f_emoji">
+      ${EMOJIS.map(e=>`<button class="${e===r.emoji?'on':''}" data-e="${e}">${e}</button>`).join('')}</div></div>
+    <div class="sheet-actions">
+      ${rid?`<button class="del" onclick="delRock('${r.id}')">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeSheet()">Cancel</button>
+      <button class="btn" onclick="saveRock()">Save</button>
+    </div>`);
+  let chosen=r.emoji;
+  $('#f_emoji').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    $('#f_emoji').querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); chosen=b.dataset.e; editing.emoji=chosen; });
+  editing.emoji=chosen;
+}
+function saveRock(){ const {rockEdit,isNew}=editing; rockEdit.name=$('#f_rname').value.trim()||'New rock'; rockEdit.emoji=editing.emoji||rockEdit.emoji;
+  if(isNew) state.rocks.push(rockEdit); closeSheet(); save(); render(); }
+function delRock(id){ if(!confirm('Delete this rock and its milestones?'))return; state.rocks=state.rocks.filter(r=>r.id!==id); openRock=null; closeSheet(); save(); render(); }
+
+/* quick-add a one-off block on the schedule */
+function quickAdd(time){
+  editing={blkNew:true};
+  sheet(`
+    <h3>Add to ${parseISO(selDate).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}</h3>
+    <div class="field"><label>What are you doing?</label><input id="b_title" placeholder="e.g. Homework, gym, hang with Kyler"></div>
+    <div class="row2">
+      <div class="field"><label>Start</label><input id="b_start" type="time" value="${time}"></div>
+      <div class="field"><label>End</label><input id="b_end" type="time"></div>
+    </div>
+    <div class="sheet-actions"><button class="btn ghost" onclick="closeSheet()">Cancel</button><button class="btn" onclick="saveBlock()">Add</button></div>`);
+  setTimeout(()=>$('#b_title').focus(),50);
+}
+function editBlock(key){ const id=key.split(':')[1]; const b=(state.blocks||[]).find(x=>x.id===id); if(!b)return;
+  editing={blk:b};
+  sheet(`
+    <h3>Edit block</h3>
+    <div class="field"><label>What are you doing?</label><input id="b_title" value="${escapeHtml(b.title)}"></div>
+    <div class="row2"><div class="field"><label>Start</label><input id="b_start" type="time" value="${b.start||''}"></div>
+      <div class="field"><label>End</label><input id="b_end" type="time" value="${b.end||''}"></div></div>
+    <div class="sheet-actions"><button class="del" onclick="delBlock('${b.id}')">Delete</button>
+      <button class="btn ghost" onclick="closeSheet()">Cancel</button><button class="btn" onclick="saveBlock()">Save</button></div>`);
+}
+function saveBlock(){ state.blocks=state.blocks||[];
+  if(editing.blk){ editing.blk.title=$('#b_title').value.trim()||'Block'; editing.blk.start=$('#b_start').value; editing.blk.end=$('#b_end').value; }
+  else { state.blocks.push({id:'b'+m(),date:selDate,title:$('#b_title').value.trim()||'Block',start:$('#b_start').value,end:$('#b_end').value,status:'todo'}); }
+  closeSheet(); save(); render();
+}
+function delBlock(id){ state.blocks=(state.blocks||[]).filter(b=>b.id!==id); closeSheet(); save(); render(); }
+
+/* ====================== BOOT ====================== */
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+
+async function boot(){
+  try{
+    const remote=await apiGet();
+    state = remote || seed();
+    if(!remote) await doSave();       // persist seed on very first run
+    showApp();
+  }catch(e){
+    if(e&&e.auth){ showGate(); }
+    else { state=seed(); showApp(); toast('Offline — changes will sync when back online'); }
+  }
+}
+function showGate(){ $('#gate').classList.remove('hide'); setTimeout(()=>$('#pin').focus(),100);
+  $('#pin').addEventListener('keydown',e=>{ if(e.key==='Enter') tryPin(); }); }
+async function tryPin(){
+  pin=$('#pin').value.trim();
+  try{ const remote=await apiGet(); state=remote||seed(); if(!remote) await doSave();
+    localStorage.setItem('plannerPin',pin); $('#gate').classList.add('hide'); showApp();
+  }catch(e){ $('#pinerr').textContent='Wrong PIN — try again'; $('#pin').value=''; $('#pin').focus(); }
+}
+function showApp(){ $('#bar').classList.remove('hide'); $('#app').classList.remove('hide'); $('#nav').classList.remove('hide'); setSync('ok'); render(); }
+
+pin=localStorage.getItem('plannerPin')||'';
+boot();
+</script>
+</body>
+</html>
