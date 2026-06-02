@@ -9,7 +9,7 @@ It auto-saves every change to the cloud, so you can open it on any device and al
 
 ## Files
 - `planner.html` — the whole app (one file, no build step). Lives on GitHub Pages.
-- `api/planner.js` — Vercel serverless function that loads/saves your data to **Vercel KV**.
+- `api/planner.js` — Vercel serverless function that loads/saves your data to a **private Vercel Blob**.
 - `PLANNER_SETUP.md` — this file.
 
 It already works offline: your data is cached in the browser (localStorage), so nothing is ever lost.
@@ -18,10 +18,11 @@ The two steps below turn on **cloud sync across devices**.
 ## One-time setup (≈5 min, in the Vercel dashboard)
 Go to https://vercel.com → your **inikaiyer-portfolio** project.
 
-**1. Create the storage (Vercel KV)**
-   - Top tabs → **Storage** → **Create Database** → choose **KV** (Upstash Redis) → name it `planner` → Create.
+**1. Create the storage (Vercel Blob)**
+   - Top tabs → **Storage** → **Create Database** → choose **Blob** → name it `juneplanner` → Create.
    - When asked, **Connect** it to the `inikaiyer-portfolio` project (all environments).
-   - This automatically adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to the project — you don't copy anything.
+   - This automatically adds `BLOB_READ_WRITE_TOKEN` to the project — you don't copy anything.
+   - Your data stays **private**: the file is never publicly accessible — only this function (which holds the token) can read or write it.
 
 **2. Set your private PIN**
    - **Settings** → **Environment Variables** → Add:
