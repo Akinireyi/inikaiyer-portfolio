@@ -136,6 +136,21 @@ nav button .ic{font-size:20px;line-height:1;}
 .statcard{flex:1;min-width:90px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
 .statcard b{font-size:22px;display:block;} .statcard span{font-size:11px;color:var(--muted);}
 
+/* ---------- status / trend / nudge ---------- */
+.ryg{width:10px;height:10px;border-radius:50%;flex:none;}
+.ryg.green{background:var(--green);} .ryg.yellow{background:var(--yellow);} .ryg.red{background:var(--red);}
+.trend{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:30px;font-weight:700;font-size:13px;border:1px solid;white-space:nowrap;}
+.trend.green{background:rgba(126,231,135,.12);color:var(--green);border-color:rgba(126,231,135,.4);}
+.trend.yellow{background:rgba(227,179,65,.12);color:#f0cf7a;border-color:rgba(227,179,65,.4);}
+.trend.red{background:rgba(248,81,73,.12);color:#ff9d96;border-color:rgba(248,81,73,.4);}
+.banner{border-radius:12px;padding:14px 16px;margin:4px 0 6px;font-size:14px;line-height:1.45;border:1px solid;}
+.banner.red{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.35);}
+.banner.yellow{background:rgba(227,179,65,.1);border-color:rgba(227,179,65,.35);}
+.banner b{color:var(--text);} .banner ul{margin:8px 0 0 18px;} .banner li{margin:3px 0;}
+.banner .nudge{margin-top:10px;font-style:italic;color:var(--text);}
+.daybtn.has::after{content:'';display:block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin:3px auto 0;}
+.daybtn.active.has::after{background:#08121f;}
+
 /* ---------- gate ---------- */
 #gate{position:fixed;inset:0;background:var(--bg);z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;}
 #gate input{font-size:22px;letter-spacing:6px;text-align:center;width:180px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:14px;}
@@ -183,7 +198,9 @@ const DAYF = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Satur
 /* ---- seed: your real rocks + recurring commitments (used only on first run) ---- */
 function seed(){
   return {
-    version:1, updatedAt:new Date().toISOString(),
+    version:2, updatedAt:new Date().toISOString(),
+    // pace knobs for the auto-planner
+    settings:{dailyCapMins:180, sessionCapMins:90},
     // Recurring commitments. day: 0=Sun..6=Sat. times in "HH:MM".
     recurring:[
       {id:'r1',title:'Tech Theater class',  days:[1,2,3,5],   start:'08:50',end:'09:50',rock:'math'},
@@ -191,6 +208,14 @@ function seed(){
       {id:'r3',title:'Work',                 days:[1],         start:'17:00',end:'19:00',rock:'work'},
       {id:'r4',title:'Work',                 days:[6],         start:'09:00',end:'11:30',rock:'work'},
     ],
+    // Free-time windows the auto-planner is allowed to fill (around the commitments above).
+    availability:[
+      {id:'a1',days:[1,2,3,4,5],start:'15:30',end:'18:00'},  // weekday after school
+      {id:'a2',days:[1,2,3,4],  start:'19:00',end:'20:30'},  // weekday evening (not Fri)
+      {id:'a3',days:[6,0],      start:'10:00',end:'16:00'},  // weekend
+    ],
+    sessions:[],   // auto/manual work blocks placed on the calendar
+    infeasibleIds:[],
     rocks:[
       {id:'math',  emoji:'📐',name:'Pass my classes (Math)',
         milestones:[
@@ -245,6 +270,115 @@ function fmtTime(hhmm){ let [h,mi]=hhmm.split(':').map(Number); const ap=h<12?'A
 function daysUntil(iso){ if(!iso) return null; const a=parseISO(iso), b=parseISO(todayISO()); return Math.round((a-b)/864e5); }
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const $=s=>document.querySelector(s);
+const JUNE_END='2026-06-30';
+const NUDGE_API='https://inikaiyer-portfolio.vercel.app/api/nudge';
+function minToHHMM(mn){ const h=Math.floor(mn/60),mi=mn%60; return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0'); }
+function isoOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function isoRange(a,b){ const out=[]; let d=parseISO(a); const end=parseISO(b); while(d<=end){ out.push(isoOf(d)); d.setDate(d.getDate()+1);} return out; }
+function fmtHrs(mn){ const h=mn/60; return (Math.round(h*2)/2)+'h'; }
+
+/* ---- sessions / capacity ---- */
+function sessionsOf(msId){ return (state.sessions||[]).filter(s=>s.msId===msId); }
+function doneMins(msId){ return sessionsOf(msId).filter(s=>s.done).reduce((a,s)=>a+(s.mins||0),0); }
+function busyBase(iso){ // recurring commitments + manual blocks (NOT auto sessions)
+  const dow=parseISO(iso).getDay(), busy=[];
+  (state.recurring||[]).forEach(r=>{ if(r.days.includes(dow)) busy.push([toMin(r.start),toMin(r.end)]); });
+  (state.blocks||[]).forEach(b=>{ if(b.date===iso&&b.start&&b.end) busy.push([toMin(b.start),toMin(b.end)]); });
+  return busy;
+}
+function freeIntervals(iso, extraBusy){ // free windows minus busy, as [[start,end],...] in minutes
+  const dow=parseISO(iso).getDay();
+  const wins=(state.availability||[]).filter(a=>a.days.includes(dow)).map(a=>[toMin(a.start),toMin(a.end)]);
+  const busy=busyBase(iso).concat(extraBusy||[]).sort((a,b)=>a[0]-b[0]);
+  const free=[];
+  wins.forEach(win=>{ let segs=[win.slice()];
+    busy.forEach(([bs,be])=>{ segs=segs.flatMap(([s,e])=>{
+      if(be<=s||bs>=e) return [[s,e]];
+      const o=[]; if(bs>s)o.push([s,Math.min(bs,e)]); if(be<e)o.push([Math.max(be,s),e]); return o; }); });
+    free.push(...segs); });
+  return free.filter(([s,e])=>e-s>=15).sort((a,b)=>a[0]-b[0]);
+}
+
+/* ---- auto-scheduler: returns a staged proposal, not committed ---- */
+function buildProposedSchedule(){
+  const keep=(state.sessions||[]).filter(s=>s.done||s.auto===false);  // preserve done + manual
+  const placed={}; keep.forEach(s=>{ (placed[s.date]=placed[s.date]||[]).push([toMin(s.start),toMin(s.end)]); });
+  const sessionCap=(state.settings&&state.settings.sessionCapMins)||90;
+  const dailyCap=(state.settings&&state.settings.dailyCapMins)||180;
+  const start=todayISO();
+  const tasks=[];
+  state.rocks.forEach(r=>r.milestones.forEach(ms=>{
+    if(ms.status==='done') return;
+    const remaining=Math.round((ms.hours||0)*60)-doneMins(ms.id);
+    if(remaining>=15) tasks.push({ms,rock:r,remaining});
+  }));
+  tasks.sort((a,b)=>{ const da=a.ms.deadline||'9999-99', db=b.ms.deadline||'9999-99';
+    return da!==db ? (da<db?-1:1) : (a.ms.priority||3)-(b.ms.priority||3); });
+  const newSessions=[], infeasible=[];
+  tasks.forEach(t=>{
+    if(t.ms.deadline && t.ms.deadline<start){ infeasible.push({ms:t.ms,rock:t.rock,shortMins:t.remaining}); return; }
+    let rem=t.remaining; const lastDay=t.ms.deadline||JUNE_END;
+    for(const iso of isoRange(start,lastDay)){
+      if(rem<15) break;
+      const usedToday=(placed[iso]||[]).reduce((a,[s,e])=>a+(e-s),0);
+      const dayLeft=dailyCap-usedToday; if(dayLeft<15) continue;
+      const free=freeIntervals(iso, placed[iso]||[]); if(!free.length) continue;
+      const [fs,fe]=free[0];
+      const size=Math.min(sessionCap, rem, dayLeft, fe-fs); if(size<15) continue;
+      newSessions.push({id:'s'+m(),msId:t.ms.id,rockId:t.rock.id,date:iso,start:minToHHMM(fs),end:minToHHMM(fs+size),mins:size,done:false,auto:true});
+      (placed[iso]=placed[iso]||[]).push([fs,fs+size]); rem-=size;
+    }
+    if(rem>=15) infeasible.push({ms:t.ms,rock:t.rock,shortMins:rem});
+  });
+  return {sessions:keep.concat(newSessions), placedCount:newSessions.length,
+    totalMins:newSessions.reduce((a,s)=>a+s.mins,0),
+    days:new Set(newSessions.map(s=>s.date)).size, infeasible};
+}
+
+/* ---- progress (hours-aware) ---- */
+function rockProgress(rock){
+  let unitTotal=0,unitDone=0,hoursTot=0,hoursDone=0,msDone=0;
+  rock.milestones.forEach(ms=>{
+    const hm=Math.round((ms.hours||0)*60), unit=hm||60;
+    unitTotal+=unit; hoursTot+=hm;
+    if(ms.status==='done'){ unitDone+=unit; hoursDone+=hm; msDone++; }
+    else { const dm=Math.min(hm,doneMins(ms.id)); unitDone+=Math.min(unit,dm); hoursDone+=dm; }
+  });
+  return {pct: unitTotal?Math.round(unitDone/unitTotal*100):null, leftMin:Math.max(0,hoursTot-hoursDone),
+    msDone, msTotal:rock.milestones.length, hasHours:hoursTot>0, unitTotal, unitDone};
+}
+function overallPct(){ let t=0,d=0; state.rocks.forEach(r=>{const p=rockProgress(r); t+=p.unitTotal; d+=p.unitDone;}); return t?Math.round(d/t*100):0; }
+
+/* ---- on-track status: green / yellow / red per rock ---- */
+function rockStatus(rock){
+  const t=todayISO(); const behind=[], reasons=[]; let blown=0,missed=0,urgent=0;
+  rock.milestones.forEach(ms=>{
+    if(ms.status==='done') return;
+    if(ms.deadline && ms.deadline<t){ blown++; behind.push({kind:'overdue',ms}); }
+    else if(ms.deadline){ const du=daysUntil(ms.deadline);
+      const remPct = ms.hours ? 1-Math.min(1,doneMins(ms.id)/(ms.hours*60)) : (ms.status==='prog'?0.5:1);
+      if(du<=2 && remPct>0.5){ urgent++; behind.push({kind:'urgent',ms,du}); } }
+  });
+  (state.sessions||[]).forEach(s=>{ if(s.rockId===rock.id && s.date<t && !s.done){ const ms=findMsById(s.msId); if(ms&&ms.status!=='done') missed++; } });
+  const infeas=rock.milestones.filter(ms=>(state.infeasibleIds||[]).includes(ms.id)).length;
+  let color='green';
+  if(blown||infeas||missed>=3) color='red'; else if(missed>=1||urgent>=1) color='yellow';
+  if(blown) reasons.push(`${blown} past deadline`);
+  if(infeas) reasons.push(`${infeas} won't fit in time`);
+  if(missed) reasons.push(`${missed} missed session${missed>1?'s':''}`);
+  if(urgent) reasons.push(`${urgent} due very soon`);
+  return {color,reasons,behind,blown,missed,urgent};
+}
+function overallTrend(){
+  const reds=[],yellows=[];
+  state.rocks.forEach(r=>{ if(!r.milestones.length) return; const st=rockStatus(r);
+    if(st.color==='red') reds.push({rock:r,st}); else if(st.color==='yellow') yellows.push({rock:r,st}); });
+  return {color: reds.length?'red':yellows.length?'yellow':'green', reds, yellows};
+}
+function syncMsFromSessions(msId){
+  const ms=findMsById(msId); if(!ms) return; const ss=sessionsOf(msId); if(!ss.length) return;
+  ms.status = ss.every(s=>s.done)?'done' : ss.some(s=>s.done)?'prog' : 'todo';
+}
 
 /* ---- networking + auto-save ---- */
 let saveTimer=null, saving=false;
@@ -275,19 +409,6 @@ async function doSave(){
   finally{ saving=false; }
 }
 
-/* ---- progress math ---- */
-function msProgress(list){ // returns {done, total, pct}
-  const counts=list.filter(x=>x.deadline||x.status!=='todo'||x.scheduledDate); // count "real" tasks
-  const total=list.length;
-  if(!total) return {done:0,total:0,pct:null};
-  let v=0; list.forEach(x=>{ v+= x.status==='done'?1 : x.status==='prog'?0.5 : 0; });
-  return {done:list.filter(x=>x.status==='done').length,total,pct:Math.round(v/total*100)};
-}
-function overallPct(){
-  let v=0,n=0; state.rocks.forEach(r=>r.milestones.forEach(x=>{ n++; v+= x.status==='done'?1:x.status==='prog'?0.5:0; }));
-  return n?Math.round(v/n*100):0;
-}
-
 /* ====================== RENDER ====================== */
 function render(){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===view));
@@ -301,58 +422,71 @@ function render(){
 function go(v){ view=v; render(); window.scrollTo(0,0); }
 
 /* ---------- DASHBOARD ---------- */
+const TREND_LABEL={green:'On track',yellow:'Slipping',red:'Behind'};
+const TREND_EMOJI={green:'🟢',yellow:'🟡',red:'🔴'};
+const PEP=['You’ve got this — one block at a time.','Future-you will be so glad you started today.','Small steps now, big relief later. Let’s go.','Knock out the next thing — momentum does the rest.','You’re closer than it feels. Keep moving.'];
+
 function renderDash(){
   const today=new Date();
+  const trend=overallTrend();
   const allMs=[]; state.rocks.forEach(r=>r.milestones.forEach(x=>allMs.push({...x,rock:r})));
   const open=allMs.filter(x=>x.status!=='done');
-
-  // due soon / at risk: has deadline, sort by date
-  const dated=open.filter(x=>x.deadline).sort((a,b)=>a.deadline.localeCompare(b.deadline));
-  const overdue=dated.filter(x=>daysUntil(x.deadline)<0);
-  const soon=dated.filter(x=>{const d=daysUntil(x.deadline);return d>=0&&d<=3;});
-
-  const doneCount=allMs.filter(x=>x.status==='done').length;
+  const overdue=open.filter(x=>x.deadline&&daysUntil(x.deadline)<0);
+  const soon=open.filter(x=>{const d=daysUntil(x.deadline);return x.deadline&&d>=0&&d<=3;});
 
   let h=`<div class="view">
-    <div class="hero">
+    <div class="hero" style="justify-content:space-between">
       <div>
         <div class="big">${DAYF[today.getDay()]}</div>
-        <div class="sub">${today.toLocaleDateString(undefined,{month:'long',day:'numeric'})} · ${open.length} tasks open · ${doneCount} done</div>
+        <div class="sub">${today.toLocaleDateString(undefined,{month:'long',day:'numeric'})} · ${overallPct()}% of June done</div>
       </div>
-    </div>
-    <div class="pill-row" style="margin:14px 0 4px">
-      <div class="statcard"><b>${overdue.length}</b><span>overdue</span></div>
-      <div class="statcard"><b>${soon.length}</b><span>due in 3 days</span></div>
-      <div class="statcard"><b>${overallPct()}%</b><span>month done</span></div>
+      <span class="trend ${trend.color}">${TREND_EMOJI[trend.color]} ${TREND_LABEL[trend.color]}</span>
     </div>`;
 
-  // At-risk section
-  if(overdue.length||soon.length){
-    h+=`<h2 class="section">⚠️ Needs attention</h2>`;
-    h+=`<div class="card">`+[...overdue,...soon].map(msRow).join('')+`</div>`;
+  // Nudge banner when slipping/behind
+  if(trend.color!=='green'){
+    const probs=[...trend.reds,...trend.yellows];
+    const names=probs.map(p=>p.rock.emoji+' '+p.rock.name).join(', ');
+    const dueLines=[...overdue,...soon].sort((a,b)=>a.deadline.localeCompare(b.deadline)).slice(0,4).map(x=>{
+      const d=daysUntil(x.deadline); const when=d<0?`${-d}d overdue`:d===0?'due today':d===1?'due tomorrow':`due in ${d} days`;
+      return `<li><b>${escapeHtml(x.title)}</b> — ${when} <span class="rock-meta">(${x.rock.emoji} ${escapeHtml(x.rock.name)})</span></li>`;
+    }).join('');
+    h+=`<div class="banner ${trend.color}">
+      You’re ${trend.color==='red'?'behind':'slipping'} on <b>${escapeHtml(names)}</b>.
+      ${dueLines?`<ul>${dueLines}</ul>`:''}
+      <div class="nudge" id="nudgeLine">${PEP[Math.floor(Math.random()*PEP.length)]}</div>
+    </div>`;
   }
 
-  // Today's schedule preview
-  const ev=eventsFor(selDateToday()).slice(0,4);
+  // Today's plan
+  const ev=eventsFor(todayISO());
+  const hasSessions=(state.sessions||[]).length>0;
   h+=`<h2 class="section">📅 Today's plan</h2><div class="card">`;
-  h+= ev.length? ev.map(e=>scheduleEvtMini(e)).join('') : `<div class="empty">No blocks scheduled yet today.<br><button class="btn ghost sm" style="margin-top:10px" onclick="go('sched')">Open schedule</button></div>`;
+  if(ev.length) h+= ev.map(e=>scheduleEvtMini(e)).join('');
+  else if(!hasSessions) h+=`<div class="empty">No plan yet. Let me lay your tasks onto your free time.<br><button class="btn sm" style="margin-top:10px" onclick="autoPlan()">✨ Auto-plan my work</button></div>`;
+  else h+=`<div class="empty">Nothing scheduled today. <button class="btn ghost sm" style="margin-top:10px" onclick="go('sched')">Open schedule</button></div>`;
   h+=`</div>`;
 
-  // Rock progress overview
+  // Rock R/Y/G overview (problem rocks first)
   h+=`<h2 class="section">🪨 Your rocks</h2>`;
-  state.rocks.filter(r=>r.milestones.length).forEach(r=>{
-    const pr=msProgress(r.milestones);
+  const ranked=state.rocks.filter(r=>r.milestones.length).map(r=>({r,st:rockStatus(r),pr:rockProgress(r)}))
+    .sort((a,b)=>({red:0,yellow:1,green:2}[a.st.color]-{red:0,yellow:1,green:2}[b.st.color]));
+  ranked.forEach(({r,st,pr})=>{
     h+=`<div class="card" style="padding:13px 16px;cursor:pointer" onclick="go('rocks')">
       <div style="display:flex;align-items:center;gap:11px">
+        <span class="ryg ${st.color}"></span>
         <span style="font-size:18px">${r.emoji}</span>
-        <span style="flex:1;font-weight:600">${escapeHtml(r.name)}</span>
-        <span class="rock-meta">${pr.done}/${pr.total}</span>
+        <span style="flex:1;font-weight:600;min-width:0">${escapeHtml(r.name)}</span>
+        <span class="rock-meta">${pr.pct!=null?pr.pct+'%':''}${pr.hasHours&&pr.leftMin>0?' · '+fmtHrs(pr.leftMin)+' left':''}</span>
       </div>
-      <div class="bar"><i style="width:${pr.pct||0}%"></i></div>
+      <div class="bar"><i style="width:${pr.pct||0}%;background:var(--${st.color==='red'?'red':st.color==='yellow'?'yellow':'green'})"></i></div>
+      ${st.reasons.length?`<div class="rock-meta" style="margin-top:6px;color:var(--${st.color==='red'?'red':'yellow'})">${st.reasons.join(' · ')}</div>`:''}
     </div>`;
   });
   h+=`</div>`;
   $('#app').innerHTML=h;
+
+  if(trend.color!=='green') fetchNudge(trend);
 }
 function selDateToday(){ return todayISO(); }
 function scheduleEvtMini(e){
@@ -368,15 +502,17 @@ let openRock=null;
 function renderRocks(){
   let h=`<div class="view"><h2 class="section">Big rocks → milestones</h2>`;
   state.rocks.forEach(r=>{
-    const pr=msProgress(r.milestones);
+    const pr=rockProgress(r);
+    const st=rockStatus(r);
     const isOpen=openRock===r.id;
     h+=`<div class="card rock ${isOpen?'open':''}">
       <div class="rock-head" onclick="toggleRock('${r.id}')">
+        ${pr.msTotal?`<span class="ryg ${st.color}" style="margin-top:7px"></span>`:''}
         <span class="rock-emoji">${r.emoji}</span>
         <div style="flex:1;min-width:0">
           <div class="rock-title">${escapeHtml(r.name)}</div>
-          <div class="rock-meta">${pr.total?pr.done+'/'+pr.total+' done':'no milestones yet'}</div>
-          ${pr.total?`<div class="bar"><i style="width:${pr.pct}%"></i></div>`:''}
+          <div class="rock-meta">${pr.msTotal?pr.msDone+'/'+pr.msTotal+' done'+(pr.hasHours&&pr.leftMin>0?' · '+fmtHrs(pr.leftMin)+' left':''):'no milestones yet'}</div>
+          ${pr.msTotal?`<div class="bar"><i style="width:${pr.pct}%;background:var(--${st.color==='red'?'red':st.color==='yellow'?'yellow':'green'})"></i></div>`:''}
         </div>
         <span class="chev">▶</span>
       </div>`;
@@ -420,6 +556,9 @@ function msRow(x){ // x has .rock attached
 function cycleStatus(rid,mid){
   const ms=findMs(rid,mid); if(!ms) return;
   ms.status = ms.status==='todo'?'prog':ms.status==='prog'?'done':'todo';
+  const ss=sessionsOf(mid);                       // keep scheduled sessions in sync
+  if(ms.status==='done') ss.forEach(s=>s.done=true);
+  else if(ms.status==='todo') ss.forEach(s=>s.done=false);
   save(); render();
 }
 function findMs(rid,mid){ const r=state.rocks.find(r=>r.id===rid); return r&&r.milestones.find(x=>x.id===mid); }
@@ -433,10 +572,14 @@ function renderSched(){
   for(let day=1;day<=30;day++){
     const dt=new Date(2026,5,day);
     const iso='2026-06-'+String(day).padStart(2,'0');
-    h+=`<button class="daybtn ${iso===selDate?'active':''} ${iso===todayISO()?'today':''}" onclick="setDate('${iso}')">
+    const hasWork=(state.sessions||[]).some(s=>s.date===iso)||(state.blocks||[]).some(b=>b.date===iso);
+    h+=`<button class="daybtn ${iso===selDate?'active':''} ${iso===todayISO()?'today':''} ${hasWork?'has':''}" onclick="setDate('${iso}')">
       <div class="dn">${DAYN[dt.getDay()]}</div><div class="dd">${day}</div></button>`;
   }
   h+=`</div>`;
+  h+=`<div style="display:flex;gap:8px;margin:2px 0 6px">
+    <button class="btn sm" style="flex:1;justify-content:center" onclick="autoPlan()">✨ Auto-plan my work</button>
+    <button class="btn ghost sm" onclick="openAvailability()">🕐 Free time</button></div>`;
   const dt=parseISO(selDate);
   h+=`<h2 class="section">${DAYF[dt.getDay()]}, June ${dt.getDate()}</h2>`;
 
@@ -482,10 +625,16 @@ function eventsFor(iso){
     out.push({key:'rec:'+r.id+':'+iso,title:r.title,start:r.start,end:r.end,status:recStatus(r.id,iso),
       rockName:rk?rk.name:'',color:'#7ee787',recId:r.id});
   }});
-  // scheduled milestones
+  // auto/manual work sessions
+  (state.sessions||[]).forEach(s=>{ if(s.date===iso){
+    const rk=state.rocks.find(x=>x.id===s.rockId), ms=findMsById(s.msId);
+    out.push({key:'ses:'+s.id,title:(ms?ms.title:'Focused work'),start:s.start,end:s.end,
+      status:s.done?'done':'todo',sesId:s.id,msId:s.msId,rockId:s.rockId,rockName:rk?rk.name:'',color:'#58a6ff'});
+  }});
+  // legacy single-slot scheduled milestones
   state.rocks.forEach(rk=>rk.milestones.forEach(x=>{ if(x.scheduledDate===iso){
     out.push({key:'ms:'+x.id,title:x.title,start:x.scheduledStart||'',end:'',status:x.status,
-      msId:x.id,rockId:rk.id,rockName:rk.name,color:'#58a6ff'});
+      msId:x.id,rockId:rk.id,rockName:rk.name,color:'#bc8cff'});
   }}));
   // one-off blocks
   (state.blocks||[]).filter(b=>b.date===iso).forEach(b=>{
@@ -499,6 +648,7 @@ function toggleEvt(key){
   const [type,id,iso]=key.split(':');
   if(type==='rec'){ state.recDone=state.recDone||{}; const k=id+':'+iso;
     const cur=state.recDone[k]||'todo'; state.recDone[k]=cur==='todo'?'prog':cur==='prog'?'done':'todo'; }
+  else if(type==='ses'){ const s=(state.sessions||[]).find(x=>x.id===id); if(s){ s.done=!s.done; syncMsFromSessions(s.msId); } }
   else if(type==='ms'){ const ms=findMsById(id); if(ms) ms.status=ms.status==='todo'?'prog':ms.status==='prog'?'done':'todo'; }
   else if(type==='blk'){ const b=(state.blocks||[]).find(b=>b.id===id); if(b) b.status=b.status==='todo'?'prog':b.status==='prog'?'done':'todo'; }
   save(); render();
@@ -619,20 +769,105 @@ function saveBlock(){ state.blocks=state.blocks||[];
 }
 function delBlock(id){ state.blocks=(state.blocks||[]).filter(b=>b.id!==id); closeSheet(); save(); render(); }
 
+/* ====================== AVAILABILITY EDITOR ====================== */
+function openAvailability(){
+  let h=`<h3>When are you free to work?</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px">The auto-planner only drops work into these windows — never on top of your classes, work shifts, or anything you've added.</p>`;
+  (state.availability||[]).forEach(a=>{
+    const dl=[1,2,3,4,5,6,0].filter(d=>a.days.includes(d)).map(d=>DAYN[d]).join(' ');
+    h+=`<div class="card" style="padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="openAvailWin('${a.id}')">
+      <div style="flex:1"><div style="font-weight:600">${dl||'—'}</div><div class="rock-meta">${fmtTime(a.start)} – ${fmtTime(a.end)}</div></div>
+      <button class="ms-edit" onclick="event.stopPropagation();delAvail('${a.id}')">✕</button></div>`;
+  });
+  if(!(state.availability||[]).length) h+=`<div class="empty">No free-time windows yet.</div>`;
+  h+=`<button class="btn ghost full" style="margin-top:4px" onclick="openAvailWin(null)">＋ Add a free-time window</button>
+    <div class="sheet-actions" style="margin-top:14px"><button class="btn full" onclick="closeSheet()">Done</button></div>`;
+  sheet(h);
+}
+function openAvailWin(id){
+  const a=id?(state.availability||[]).find(x=>x.id===id):{id:'a'+m(),days:[1,2,3,4,5],start:'15:30',end:'18:00'};
+  editing={avail:a,isNew:!id};
+  sheet(`<h3>${id?'Edit':'New'} free window</h3>
+    <div class="field"><label>Days</label><div class="seg" id="av_days">
+      ${[1,2,3,4,5,6,0].map(d=>`<button data-d="${d}" class="${a.days.includes(d)?'on':''}">${DAYN[d]}</button>`).join('')}</div></div>
+    <div class="row2"><div class="field"><label>From</label><input id="av_s" type="time" value="${a.start}"></div>
+      <div class="field"><label>To</label><input id="av_e" type="time" value="${a.end}"></div></div>
+    <div class="sheet-actions">${id?`<button class="del" onclick="delAvail('${a.id}')">Delete</button>`:''}
+      <button class="btn ghost" onclick="openAvailability()">Back</button><button class="btn" onclick="saveAvail()">Save</button></div>`);
+  $('#av_days').querySelectorAll('button').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
+}
+function saveAvail(){
+  const {avail,isNew}=editing;
+  const days=[...$('#av_days').querySelectorAll('button.on')].map(b=>+b.dataset.d);
+  avail.days=days.length?days:[1]; avail.start=$('#av_s').value||'15:30'; avail.end=$('#av_e').value||'18:00';
+  if(isNew){ state.availability=state.availability||[]; state.availability.push(avail); }
+  save(); openAvailability();
+}
+function delAvail(id){ state.availability=(state.availability||[]).filter(a=>a.id!==id); save(); openAvailability(); }
+
+/* ====================== AUTO-PLAN (propose → verify → commit) ====================== */
+let proposal=null;
+function autoPlan(){
+  proposal=buildProposedSchedule();
+  const hrs=fmtHrs(proposal.totalMins);
+  let warn='';
+  if(proposal.infeasible.length){
+    warn=`<div class="banner red" style="margin-bottom:12px">⚠️ ${proposal.infeasible.length} task${proposal.infeasible.length>1?'s':''} won't fully fit before ${proposal.infeasible.length>1?'their deadlines':'its deadline'} with your current free time:
+      <ul>${proposal.infeasible.map(i=>`<li><b>${escapeHtml(i.ms.title)}</b> — ${fmtHrs(i.shortMins)} short</li>`).join('')}</ul>
+      <div style="margin-top:6px;font-size:12px">Add more free time, lower the hours, or move the deadline.</div></div>`;
+  }
+  if(!proposal.placedCount && !warn){
+    sheet(`<h3>✨ Auto-plan</h3><div class="empty">Everything with a time estimate is already scheduled or done. Add hours/deadlines to a milestone, or add free-time windows, then try again.</div>
+      <div class="sheet-actions"><button class="btn full" onclick="closeProposal()">OK</button></div>`); return;
+  }
+  sheet(`<h3>✨ Here's my proposed plan</h3>
+    ${warn}
+    <p style="color:var(--muted);font-size:14px;margin-bottom:14px">I placed <b style="color:var(--text)">${hrs}</b> of focused work across <b style="color:var(--text)">${proposal.days} day${proposal.days!==1?'s':''}</b>, fitting only into your free windows (around classes &amp; work). Anything you've already finished stays put.</p>
+    <div class="sheet-actions"><button class="btn ghost" onclick="closeProposal()">Discard</button><button class="btn" onclick="acceptProposal()">Accept plan</button></div>`);
+}
+function acceptProposal(){
+  if(!proposal) return;
+  state.sessions=proposal.sessions;
+  state.infeasibleIds=proposal.infeasible.map(i=>i.ms.id);
+  proposal=null; closeSheet(); save(); view='sched'; render();
+  toast('Plan added to your schedule ✓');
+}
+function closeProposal(){ proposal=null; closeSheet(); }
+
+/* ====================== NUDGE (dynamic encouragement, with fallback) ====================== */
+async function fetchNudge(trend){
+  try{
+    const probs=[...trend.reds,...trend.yellows];
+    const summary=probs.map(p=>`${p.rock.name}: ${p.st.reasons.join(', ')}`).join('; ');
+    const r=await fetch(NUDGE_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({summary,status:trend.color})});
+    if(!r.ok) return; const d=await r.json();
+    if(d&&d.reply){ const el=$('#nudgeLine'); if(el) el.textContent=d.reply; }
+  }catch(e){/* keep the static line */}
+}
+
 /* ====================== BOOT ====================== */
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+/* fill in fields added in later versions so older saved data keeps working */
+function ensureDefaults(s){
+  if(!s) return s;
+  if(!s.settings) s.settings={dailyCapMins:180, sessionCapMins:90};
+  if(!s.availability) s.availability=seed().availability;
+  if(!s.sessions) s.sessions=[];
+  if(!s.infeasibleIds) s.infeasibleIds=[];
+  return s;
+}
 
 function loadLocal(){ try{ const s=localStorage.getItem(LS_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
 
 async function boot(){
   try{
     const remote=await apiGet();
-    state = remote || loadLocal() || seed();   // cloud wins; else local cache; else fresh seed
+    state = ensureDefaults(remote || loadLocal() || seed());   // cloud wins; else local cache; else fresh seed
     await doSave();                             // mirror locally + push to cloud (if configured)
     showApp();
   }catch(e){
     if(e&&e.auth){ showGate(); return; }
-    state = loadLocal() || seed();              // offline: use last local copy, keep working
+    state = ensureDefaults(loadLocal() || seed());              // offline: use last local copy, keep working
     showApp(); save(); toast('Offline — changes are saved here and will sync when back online');
   }
 }
@@ -640,7 +875,7 @@ function showGate(){ $('#gate').classList.remove('hide'); setTimeout(()=>$('#pin
   $('#pin').addEventListener('keydown',e=>{ if(e.key==='Enter') tryPin(); }); }
 async function tryPin(){
   pin=$('#pin').value.trim();
-  try{ const remote=await apiGet(); state=remote||loadLocal()||seed(); await doSave();
+  try{ const remote=await apiGet(); state=ensureDefaults(remote||loadLocal()||seed()); await doSave();
     localStorage.setItem('plannerPin',pin); $('#gate').classList.add('hide'); showApp();
   }catch(e){ $('#pinerr').textContent='Wrong PIN — try again'; $('#pin').value=''; $('#pin').focus(); }
 }
