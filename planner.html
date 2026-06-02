@@ -175,7 +175,8 @@ nav button .ic{font-size:20px;line-height:1;}
    Everything auto-saves to Netlify Blobs via /.netlify/functions/planner
    ========================================================================= */
 
-const API = '/.netlify/functions/planner';
+const API = 'https://inikaiyer-portfolio.vercel.app/api/planner';
+const LS_KEY = 'junePlannerState';
 const DAYN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAYF = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
@@ -265,6 +266,7 @@ async function doSave(){
   if(saving){ save(); return; }
   saving=true;
   state.updatedAt=new Date().toISOString();
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){}  // local mirror — never lose data
   try{
     const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','x-planner-pin':pin},body:JSON.stringify({state})});
     if(!r.ok) throw new Error('save failed');
@@ -620,22 +622,25 @@ function delBlock(id){ state.blocks=(state.blocks||[]).filter(b=>b.id!==id); clo
 /* ====================== BOOT ====================== */
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
 
+function loadLocal(){ try{ const s=localStorage.getItem(LS_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+
 async function boot(){
   try{
     const remote=await apiGet();
-    state = remote || seed();
-    if(!remote) await doSave();       // persist seed on very first run
+    state = remote || loadLocal() || seed();   // cloud wins; else local cache; else fresh seed
+    await doSave();                             // mirror locally + push to cloud (if configured)
     showApp();
   }catch(e){
-    if(e&&e.auth){ showGate(); }
-    else { state=seed(); showApp(); toast('Offline — changes will sync when back online'); }
+    if(e&&e.auth){ showGate(); return; }
+    state = loadLocal() || seed();              // offline: use last local copy, keep working
+    showApp(); save(); toast('Offline — changes are saved here and will sync when back online');
   }
 }
 function showGate(){ $('#gate').classList.remove('hide'); setTimeout(()=>$('#pin').focus(),100);
   $('#pin').addEventListener('keydown',e=>{ if(e.key==='Enter') tryPin(); }); }
 async function tryPin(){
   pin=$('#pin').value.trim();
-  try{ const remote=await apiGet(); state=remote||seed(); if(!remote) await doSave();
+  try{ const remote=await apiGet(); state=remote||loadLocal()||seed(); await doSave();
     localStorage.setItem('plannerPin',pin); $('#gate').classList.add('hide'); showApp();
   }catch(e){ $('#pinerr').textContent='Wrong PIN — try again'; $('#pin').value=''; $('#pin').focus(); }
 }
